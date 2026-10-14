@@ -22,6 +22,33 @@ import { RightPuzzleFive } from "./puzzles/RightPuzzleFive";
 import { BottomFinalPuzzle } from "./puzzles/BottomFinalPuzzle";
 import type { InventoryItemId } from "./inventory/items";
 
+// Phones / tablets get lighter rendering settings.
+const IS_TOUCH_DEVICE =
+  typeof window !== "undefined" &&
+  window.matchMedia(
+    "(pointer: coarse)",
+  ).matches;
+
+// Camera distances tuned for a desktop window. They are minimums:
+// on narrow screens (phone portrait) the camera moves back further
+// so the whole box / face still fits.
+const OVERVIEW_CAMERA_Z = 11.8;
+const FOCUS_CAMERA_Z = 9.6;
+
+// Screen area the box needs in the overview (any rotation), in world units.
+const OVERVIEW_FIT_WIDTH = 8.4;
+const OVERVIEW_FIT_HEIGHT = 7.0;
+
+// Extra room around a focused face.
+const FOCUS_FIT_MARGIN = 1.06;
+
+type ScreenInsets = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
 type PuzzleBox3DOptions = {
   onFocusChange?: (
     face: BoxFaceName | null,
@@ -82,6 +109,18 @@ export class PuzzleBox3D {
   private animationFrame = 0;
   private clock = new THREE.Clock();
 
+  private viewportWidth = 1;
+  private viewportHeight = 1;
+
+  // Space covered by the HUD on phones; the 3D view is fitted
+  // into the area that is left over.
+  private hudInsets: ScreenInsets = {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  };
+
   public readonly dimensions: BoxDimensions = {
     width: 6.4,
     height: 4.2,
@@ -107,10 +146,12 @@ export class PuzzleBox3D {
           "high-performance",
       });
 
+    // Phone screens are often 3x; rendering at that density is slow
+    // and makes the phone hot for little visible gain.
     this.renderer.setPixelRatio(
       Math.min(
         window.devicePixelRatio,
-        2,
+        IS_TOUCH_DEVICE ? 1.5 : 2,
       ),
     );
 
@@ -297,6 +338,9 @@ export class PuzzleBox3D {
         rotationController:
           this.rotationController,
 
+        getCameraZ: (face) =>
+          this.getCameraZ(face),
+
         onFocusChange: (face) => {
           this.puzzleOne.setEnabled(
             face === "front",
@@ -380,9 +424,12 @@ export class PuzzleBox3D {
 
     keyLight.castShadow = true;
 
+    const shadowSize =
+      IS_TOUCH_DEVICE ? 1024 : 2048;
+
     keyLight.shadow.mapSize.set(
-      2048,
-      2048,
+      shadowSize,
+      shadowSize,
     );
 
     keyLight.shadow.camera.near = 1;
@@ -816,6 +863,9 @@ export class PuzzleBox3D {
         rect.height,
       );
 
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+
     this.renderer.setSize(
       width,
       height,
@@ -825,7 +875,216 @@ export class PuzzleBox3D {
     this.camera.aspect =
       width / height;
 
+    this.hudInsets =
+      this.measureHudInsets(
+        width,
+        height,
+      );
+
+    const {
+      top,
+      right,
+      bottom,
+      left,
+    } = this.hudInsets;
+
+    // Shift the center of the view into the free area between
+    // the HUD bars (e.g. above the inventory on a phone).
+    if (
+      top + right + bottom + left >
+      0
+    ) {
+      this.camera.setViewOffset(
+        width,
+        height,
+        (right - left) / 2,
+        (bottom - top) / 2,
+        width,
+        height,
+      );
+    } else {
+      this.camera.clearViewOffset();
+    }
+
     this.camera.updateProjectionMatrix();
+
+    // Undefined during the first resize inside the constructor.
+    this.focusController?.refreshCamera();
+  }
+
+  // Only on phone-sized layouts, where the HUD is laid out as bars
+  // (see the media queries in global.css). On a desktop the HUD
+  // floats over the scene as before.
+  private measureHudInsets(
+    width: number,
+    height: number,
+  ): ScreenInsets {
+    const insets: ScreenInsets = {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+
+    const compact =
+      (height >= width &&
+        width <= 600) ||
+      (width > height &&
+        height <= 500);
+
+    if (!compact) return insets;
+
+    const hostRect =
+      this.host.getBoundingClientRect();
+
+    const gap = 6;
+
+    for (
+      const element
+      of this.host.querySelectorAll<HTMLElement>(
+        "[data-hud]",
+      )
+    ) {
+      const rect =
+        element.getBoundingClientRect();
+
+      if (
+        rect.width === 0 ||
+        rect.height === 0
+      ) {
+        continue;
+      }
+
+      if (
+        element.dataset.hud ===
+        "top"
+      ) {
+        insets.top = Math.max(
+          insets.top,
+          rect.bottom -
+            hostRect.top +
+            gap,
+        );
+
+        continue;
+      }
+
+      // Inventory: a bar along the bottom (portrait)
+      // or a column on the right (landscape).
+      if (
+        rect.width >=
+        rect.height
+      ) {
+        insets.bottom = Math.max(
+          insets.bottom,
+          hostRect.bottom -
+            rect.top +
+            gap,
+        );
+      } else {
+        insets.right = Math.max(
+          insets.right,
+          hostRect.right -
+            rect.left +
+            gap,
+        );
+      }
+    }
+
+    return insets;
+  }
+
+  // Distance at which an object of the given size fits into the
+  // free (non-HUD) part of the screen.
+  private getFitDistance(
+    objectWidth: number,
+    objectHeight: number,
+  ) {
+    const {
+      top,
+      right,
+      bottom,
+      left,
+    } = this.hudInsets;
+
+    const freeWidth =
+      Math.max(
+        1,
+        this.viewportWidth -
+          left -
+          right,
+      );
+
+    const freeHeight =
+      Math.max(
+        1,
+        this.viewportHeight -
+          top -
+          bottom,
+      );
+
+    const tanHalfFov =
+      Math.tan(
+        THREE.MathUtils.degToRad(
+          this.camera.fov / 2,
+        ),
+      );
+
+    return (
+      (this.viewportHeight /
+        (2 * tanHalfFov)) *
+      Math.max(
+        objectHeight /
+          freeHeight,
+        objectWidth /
+          freeWidth,
+      )
+    );
+  }
+
+  private getCameraZ(
+    face: BoxFaceName | null,
+  ) {
+    if (!face) {
+      return Math.max(
+        OVERVIEW_CAMERA_Z,
+        this.getFitDistance(
+          OVERVIEW_FIT_WIDTH,
+          OVERVIEW_FIT_HEIGHT,
+        ),
+      );
+    }
+
+    const size =
+      this.getFaceSize(face);
+
+    // The focused face is turned toward the camera, so its plane
+    // sits this far in front of the box center.
+    const {
+      width,
+      height,
+      depth,
+    } = this.dimensions;
+
+    const faceOffset =
+      face === "front" ||
+      face === "back"
+        ? depth / 2
+        : face === "left" ||
+            face === "right"
+          ? width / 2
+          : height / 2;
+
+    return Math.max(
+      FOCUS_CAMERA_Z,
+      faceOffset +
+        this.getFitDistance(
+          size.width *
+            FOCUS_FIT_MARGIN,
+          size.height *
+            FOCUS_FIT_MARGIN,
+        ),
+    );
   }
 
   private animate = () => {

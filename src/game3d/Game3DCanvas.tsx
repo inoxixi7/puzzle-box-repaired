@@ -32,6 +32,13 @@ const FACE_NAMES: Record<
   bottom: "底面",
 };
 
+// Phones and tablets: say "タップ" instead of "クリック".
+const IS_TOUCH_DEVICE =
+  typeof window !== "undefined" &&
+  window.matchMedia(
+    "(pointer: coarse)",
+  ).matches;
+
 export function Game3DCanvas() {
   const hostRef =
     useRef<
@@ -207,61 +214,47 @@ export function Game3DCanvas() {
         background:
           "#0b0d10",
         userSelect: "none",
+        // Stop pinch-zoom / page scrolling from stealing touch drags.
+        touchAction: "none",
       }}
     >
       {!focusedFace && (
         <div
+          className="hud-top-label"
+          data-hud="top"
           style={{
-            position:
-              "absolute",
-            left: 20,
-            top: 18,
-            zIndex: 10,
-            pointerEvents:
-              "none",
             color:
               "rgba(232, 220, 198, 0.82)",
-            fontSize: 13,
             letterSpacing:
               "0.04em",
-            padding:
-              "8px 11px",
-            borderRadius: 8,
             background:
               "rgba(14, 12, 10, 0.48)",
             border:
               "1px solid rgba(183, 145, 88, 0.28)",
-            backdropFilter:
-              "blur(6px)",
           }}
         >
-          ドラッグして箱を回す・面をクリックして調べる
+          {IS_TOUCH_DEVICE
+            ? "ドラッグして箱を回す・面をタップして調べる"
+            : "ドラッグして箱を回す・面をクリックして調べる"}
+
+          <span className="hud-sub-hint">
+            横向きにすると遊びやすくなります
+          </span>
         </div>
       )}
 
       {focusedFace && (
         <>
           <div
+            className="hud-top-label has-button"
+            data-hud="top"
             style={{
-              position:
-                "absolute",
-              left: 20,
-              top: 18,
-              zIndex: 10,
-              pointerEvents:
-                "none",
               color:
                 "rgba(232, 220, 198, 0.88)",
-              fontSize: 13,
-              padding:
-                "8px 11px",
-              borderRadius: 8,
               background:
                 "rgba(14, 12, 10, 0.58)",
               border:
                 "1px solid rgba(183, 145, 88, 0.32)",
-              backdropFilter:
-                "blur(6px)",
             }}
           >
             {
@@ -282,24 +275,15 @@ export function Game3DCanvas() {
               gameRef.current
                 ?.exitFocus();
             }}
+            className="hud-back-button"
+            data-hud="top"
             style={{
-              position:
-                "absolute",
-              right: 20,
-              top: 18,
-              zIndex: 20,
-              minWidth: 108,
-              minHeight: 44,
-              borderRadius: 9,
               border:
                 "1px solid rgba(183, 145, 88, 0.48)",
               background:
                 "rgba(24, 18, 13, 0.84)",
               color:
                 "#e7d3ad",
-              cursor:
-                "pointer",
-              fontSize: 13,
             }}
           >
             観察に戻る

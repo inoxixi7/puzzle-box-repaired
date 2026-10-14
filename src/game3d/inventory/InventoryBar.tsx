@@ -233,22 +233,7 @@ export function InventoryBar() {
   ]);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        right: 18,
-        bottom: 18,
-        zIndex: 20,
-        display: "flex",
-        flexDirection:
-          "column",
-        alignItems:
-          "flex-end",
-        gap: 8,
-        pointerEvents:
-          "auto",
-      }}
-    >
+    <div className="inventory-root">
       <style>
         {`
           @keyframes inventory-acquired {
@@ -299,10 +284,9 @@ export function InventoryBar() {
       )}
 
       <div
+        className="inventory-panel"
+        data-hud="inventory"
         style={{
-          padding:
-            "8px 10px 10px",
-          borderRadius: 12,
           background:
             "rgba(14, 12, 10, 0.78)",
           border:
@@ -314,19 +298,10 @@ export function InventoryBar() {
         }}
       >
         <div
+          className="inventory-header"
           style={{
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems:
-              "center",
-            minHeight: 22,
-            marginBottom: 7,
             color:
               "rgba(229, 214, 188, 0.84)",
-            fontSize: 12,
-            letterSpacing:
-              "0.08em",
           }}
         >
           <span>
@@ -343,17 +318,17 @@ export function InventoryBar() {
                   "0.02em",
               }}
             >
-              選択中
+              {
+                getInventoryItem(
+                  selectedItem,
+                ).name
+              }
+              を選択中
             </span>
           )}
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 7,
-          }}
-        >
+        <div className="inventory-slots">
           {inventory.map(
             (
               item,
@@ -399,18 +374,8 @@ export function InventoryBar() {
                     definition
                       ?.name
                   }
+                  className="inventory-slot"
                   style={{
-                    width: 58,
-                    height: 58,
-                    position:
-                      "relative",
-                    display:
-                      "grid",
-                    placeItems:
-                      "center",
-                    padding: 0,
-                    borderRadius:
-                      9,
                     border:
                       selected
                         ? "2px solid #d8ac68"
@@ -471,14 +436,10 @@ export function InventoryBar() {
         </div>
 
         <div
+          className="inventory-footer"
           style={{
-            height: 18,
-            marginTop: 6,
-            textAlign:
-              "right",
             color:
               "rgba(213, 198, 175, 0.58)",
-            fontSize: 11,
           }}
         >
           {selectedItem

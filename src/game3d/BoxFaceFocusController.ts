@@ -10,6 +10,9 @@ type BoxFaceFocusControllerOptions = {
   boxRoot: THREE.Group;
   focusMeshes: Map<BoxFaceName, THREE.Mesh>;
   rotationController: BoxRotationController;
+  // Camera distance for the overview (null) or a focused face.
+  // Depends on the screen shape, so it is asked for each time.
+  getCameraZ: (face: BoxFaceName | null) => number;
   onFocusChange?: (face: BoxFaceName | null) => void;
 };
 
@@ -41,12 +44,11 @@ export class BoxFaceFocusController {
   private pointerDownX = 0;
   private pointerDownY = 0;
   private pointerDownId: number | null = null;
+  private pointerDownType = "mouse";
 
   private focusing = false;
   private onFocusChange?: (face: BoxFaceName | null) => void;
-
-  private readonly normalCameraZ = 11.8;
-  private readonly focusCameraZ = 9.6;
+  private getCameraZ: (face: BoxFaceName | null) => number;
 
   constructor(options: BoxFaceFocusControllerOptions) {
     this.canvas = options.canvas;
@@ -55,6 +57,7 @@ export class BoxFaceFocusController {
     this.focusMeshes = options.focusMeshes;
     this.rotationController = options.rotationController;
     this.onFocusChange = options.onFocusChange;
+    this.getCameraZ = options.getCameraZ;
 
     this.canvas.addEventListener("pointermove", this.handlePointerMove);
     this.canvas.addEventListener("pointerdown", this.handlePointerDown);
@@ -74,6 +77,7 @@ export class BoxFaceFocusController {
     if (this.focusedFace || this.focusing) return;
 
     this.pointerDownId = event.pointerId;
+    this.pointerDownType = event.pointerType;
     this.pointerDownX = event.clientX;
     this.pointerDownY = event.clientY;
   };
@@ -114,7 +118,11 @@ export class BoxFaceFocusController {
     this.pointerDownId = null;
 
     // 拖动是旋转盒子；只有接近“点击”才进入面操作。
-    if (distance > 7) return;
+    // 手指点按时会轻微抖动，所以触摸的容差更大。
+    const tapTolerance =
+      this.pointerDownType === "mouse" ? 7 : 14;
+
+    if (distance > tapTolerance) return;
 
     const face = this.pickFace(
       event.clientX,
@@ -280,7 +288,7 @@ export class BoxFaceFocusController {
     });
 
     gsap.to(this.camera.position, {
-      z: this.focusCameraZ,
+      z: this.getCameraZ(face),
       duration: 0.58,
       ease: "power3.inOut",
     });
@@ -299,7 +307,7 @@ export class BoxFaceFocusController {
     );
 
     gsap.to(this.camera.position, {
-      z: this.normalCameraZ,
+      z: this.getCameraZ(null),
       duration: 0.38,
       ease: "power2.inOut",
       onComplete: () => {
@@ -309,6 +317,24 @@ export class BoxFaceFocusController {
     });
 
     this.onFocusChange?.(null);
+  }
+
+  // Called after a resize / rotation of the phone.
+  public refreshCamera() {
+    if (this.focusing) return;
+
+    gsap.killTweensOf(
+      this.camera.position,
+    );
+
+    this.camera.position.z =
+      this.getCameraZ(
+        this.focusedFace,
+      );
+
+    if (!this.focusedFace) {
+      this.rotationController.setEnabled(true);
+    }
   }
 
   public dispose() {

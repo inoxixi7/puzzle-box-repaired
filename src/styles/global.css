@@ -22,13 +22,232 @@
       sans-serif;
   
     overflow: hidden;
+
+    /* Phones: no rubber-band scrolling, long-press menus,
+       text selection, or grey tap flashes while playing. */
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
   
   button,
   input {
     font: inherit;
   }
+
+  button {
+    /* Removes the double-tap-to-zoom delay on mobile. */
+    touch-action: manipulation;
+  }
   
   canvas {
     display: block;
+  }
+
+  /* ==================================================
+     HUD (top bar)
+     ================================================== */
+
+  .hud-top-label {
+    position: absolute;
+    left: calc(20px + env(safe-area-inset-left));
+    top: calc(18px + env(safe-area-inset-top));
+    z-index: 10;
+    max-width: calc(100% - 40px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    pointer-events: none;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 8px 11px;
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+  }
+
+  .hud-top-label.has-button {
+    /* Leave room for the 観察に戻る button on the right. */
+    max-width: calc(100% - 168px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+
+  .hud-back-button {
+    position: absolute;
+    right: calc(20px + env(safe-area-inset-right));
+    top: calc(18px + env(safe-area-inset-top));
+    z-index: 20;
+    min-width: 108px;
+    min-height: 44px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .hud-sub-hint {
+    display: none;
+  }
+
+  /* ==================================================
+     INVENTORY
+     ================================================== */
+
+  .inventory-root {
+    position: absolute;
+    right: calc(18px + env(safe-area-inset-right));
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  .inventory-panel {
+    padding: 8px 10px 10px;
+    border-radius: 12px;
+  }
+
+  .inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 22px;
+    margin-bottom: 7px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .inventory-slots {
+    display: flex;
+    gap: 7px;
+  }
+
+  .inventory-slot {
+    width: 58px;
+    height: 58px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 9px;
+  }
+
+  .inventory-slot svg {
+    max-width: 78%;
+    max-height: 78%;
+  }
+
+  .inventory-footer {
+    height: 18px;
+    margin-top: 6px;
+    text-align: right;
+    font-size: 11px;
+  }
+
+  /* --------------------------------------------------
+     Phone, portrait: full-width bar along the bottom.
+     -------------------------------------------------- */
+  @media (max-width: 600px) and (orientation: portrait) {
+    .hud-top-label {
+      left: calc(12px + env(safe-area-inset-left));
+      top: calc(12px + env(safe-area-inset-top));
+      max-width: calc(100% - 24px);
+      font-size: 12px;
+      padding: 7px 10px;
+    }
+
+    .hud-top-label.has-button {
+      max-width: calc(100% - 136px);
+    }
+
+    .hud-back-button {
+      right: calc(12px + env(safe-area-inset-right));
+      top: calc(12px + env(safe-area-inset-top));
+      min-width: 96px;
+      font-size: 12px;
+    }
+
+    .hud-sub-hint {
+      display: block;
+      opacity: 0.7;
+      font-size: 11px;
+    }
+
+    .inventory-root {
+      left: calc(10px + env(safe-area-inset-left));
+      right: calc(10px + env(safe-area-inset-right));
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      align-items: stretch;
+    }
+
+    .inventory-panel {
+      padding: 6px 8px 8px;
+    }
+
+    .inventory-header {
+      min-height: 18px;
+      margin-bottom: 5px;
+      font-size: 11px;
+    }
+
+    .inventory-slots {
+      gap: 6px;
+    }
+
+    .inventory-slot {
+      flex: 1 1 0;
+      width: auto;
+      height: auto;
+      max-height: 56px;
+      aspect-ratio: 1;
+    }
+
+    .inventory-footer {
+      display: none;
+    }
+  }
+
+  /* --------------------------------------------------
+     Phone, landscape: vertical column on the right
+     so it does not cover the focused face.
+     -------------------------------------------------- */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .hud-top-label {
+      left: calc(12px + env(safe-area-inset-left));
+      top: calc(10px + env(safe-area-inset-top));
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+
+    .hud-back-button {
+      right: calc(12px + env(safe-area-inset-right));
+      top: calc(10px + env(safe-area-inset-top));
+      min-width: 96px;
+      min-height: 40px;
+      font-size: 12px;
+    }
+
+    .inventory-root {
+      right: calc(10px + env(safe-area-inset-right));
+      bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .inventory-panel {
+      padding: 6px;
+    }
+
+    .inventory-header,
+    .inventory-footer {
+      display: none;
+    }
+
+    .inventory-slots {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .inventory-slot {
+      /* Shrinks on very short screens; 44px stays tappable. */
+      width: clamp(44px, calc((100vh - 120px) / 5.6), 50px);
+      height: clamp(44px, calc((100vh - 120px) / 5.6), 50px);
+    }
   }

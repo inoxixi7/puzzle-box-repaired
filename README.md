@@ -12,10 +12,19 @@ npm ci
 npm run dev
 ```
 
+## 在线试玩
+
+- 网页版：https://inoxixi7.github.io/puzzle-box-repaired/
+- 离线单文件版：https://inoxixi7.github.io/puzzle-box-repaired/puzzle-box-offline.html
+  （右键“另存为”下载后，双击用 Chrome / Edge 打开即可，无需安装任何东西）
+
+推送到 `main` 后，GitHub Actions 会自动构建并更新上面的网站（`.github/workflows/deploy-pages.yml`）。
+
 ## 构建网页版本
 
 ```bash
-npm run build
+npm run build          # 输出到 dist/，需要放到网页服务器上
+npm run build:single   # 输出 dist-single/index.html，单个文件，可直接双击打开
 ```
 
 ## 本次修复

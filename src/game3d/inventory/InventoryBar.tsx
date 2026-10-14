@@ -185,17 +185,34 @@ export function InventoryBar() {
     InventoryItemId | null
   >(null);
 
-  useEffect(() => {
-    if (
-      !lastAcquiredItem ||
-      acquisitionSerial <= 0
-    ) {
-      return;
-    }
+  const [
+    noticeSerial,
+    setNoticeSerial,
+  ] = useState(
+    acquisitionSerial,
+  );
+
+  // Show the notice when a new item arrives. Adjusting state during
+  // render (instead of in an effect) avoids an extra cascading render.
+  if (
+    noticeSerial !==
+    acquisitionSerial
+  ) {
+    setNoticeSerial(
+      acquisitionSerial,
+    );
 
     setNoticeItem(
-      lastAcquiredItem,
+      acquisitionSerial > 0
+        ? lastAcquiredItem
+        : null,
     );
+  }
+
+  useEffect(() => {
+    if (!noticeItem) {
+      return;
+    }
 
     const timer =
       window.setTimeout(
@@ -211,7 +228,7 @@ export function InventoryBar() {
       );
     };
   }, [
-    lastAcquiredItem,
+    noticeItem,
     acquisitionSerial,
   ]);
 

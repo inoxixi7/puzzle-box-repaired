@@ -201,8 +201,8 @@ export function createSealMedalGroup(
   const centerRing =
     new THREE.Mesh(
       new THREE.RingGeometry(
-        0.10,
-        0.145,
+        0.075,
+        0.11,
         4,
       ),
       new THREE.MeshBasicMaterial({
@@ -219,7 +219,7 @@ export function createSealMedalGroup(
   const centerDot =
     new THREE.Mesh(
       new THREE.CircleGeometry(
-        0.035,
+        0.028,
         24,
       ),
       new THREE.MeshBasicMaterial({
@@ -238,24 +238,24 @@ export function createSealMedalGroup(
     {
       type: "circle" as const,
       x: 0,
-      y: 0.235,
+      y: 0.225,
       dots: 1,
     },
     {
       type: "triangle" as const,
-      x: 0.235,
+      x: 0.225,
       y: 0,
       dots: 2,
     },
     {
       type: "diamond" as const,
       x: 0,
-      y: -0.235,
+      y: -0.225,
       dots: 3,
     },
     {
       type: "square" as const,
-      x: -0.235,
+      x: -0.225,
       y: 0,
       dots: 4,
     },
@@ -277,10 +277,23 @@ export function createSealMedalGroup(
 
     group.add(symbol);
 
-    const dotStartX =
-      clue.x -
-      (clue.dots - 1) *
-        0.021;
+    // Dots sit between the symbol and the medal center (like the ○ clue),
+    // laid out perpendicular to that direction. Placing them on the outer
+    // side let the raised rim hide them (◇ / □ lost their dots).
+    const distance =
+      Math.hypot(
+        clue.x,
+        clue.y,
+      );
+
+    const inwardX =
+      -clue.x / distance;
+
+    const inwardY =
+      -clue.y / distance;
+
+    const dotSpacing = 0.03;
+    const dotInset = 0.075;
 
     for (
       let i = 0;
@@ -290,7 +303,7 @@ export function createSealMedalGroup(
       const dot =
         new THREE.Mesh(
           new THREE.CircleGeometry(
-            0.012,
+            0.011,
             18,
           ),
           new THREE.MeshBasicMaterial({
@@ -298,11 +311,17 @@ export function createSealMedalGroup(
           }),
         );
 
+      const offset =
+        (i - (clue.dots - 1) / 2) *
+        dotSpacing;
+
       dot.position.set(
-        dotStartX +
-          i * 0.042,
-        clue.y -
-          0.075,
+        clue.x +
+          inwardX * dotInset -
+          inwardY * offset,
+        clue.y +
+          inwardY * dotInset +
+          inwardX * offset,
         0.079,
       );
 

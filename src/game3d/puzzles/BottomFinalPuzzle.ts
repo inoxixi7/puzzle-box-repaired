@@ -10,6 +10,10 @@ import {
   FINAL_SYMBOL_SEQUENCE,
 } from "./SealMedal";
 
+// Keep the medal socket clear of the symbol dial below it.
+// (At y=1.05 the socket and installed medal overlapped the dial plate.)
+const MEDAL_SOCKET_Y = 1.55;
+
 type BottomFinalPuzzleOptions = {
   anchor: THREE.Group;
   canvas: HTMLCanvasElement;
@@ -190,7 +194,7 @@ export class BottomFinalPuzzle {
 
     recess.position.set(
       0,
-      1.05,
+      MEDAL_SOCKET_Y,
       0.14,
     );
 
@@ -210,7 +214,7 @@ export class BottomFinalPuzzle {
 
     outerRing.position.set(
       0,
-      1.05,
+      MEDAL_SOCKET_Y,
       0.205,
     );
 
@@ -249,7 +253,7 @@ export class BottomFinalPuzzle {
       notch.position.set(
         Math.sin(angle) *
           0.53,
-        1.05 +
+        MEDAL_SOCKET_Y +
           Math.cos(angle) *
             0.53,
         0.21,
@@ -279,7 +283,7 @@ export class BottomFinalPuzzle {
 
     centerDiamond.position.set(
       0,
-      1.05,
+      MEDAL_SOCKET_Y,
       0.22,
     );
 
@@ -304,7 +308,7 @@ export class BottomFinalPuzzle {
 
     hitbox.position.set(
       0,
-      1.05,
+      MEDAL_SOCKET_Y,
       0.30,
     );
 
@@ -345,7 +349,7 @@ export class BottomFinalPuzzle {
 
     medal.position.set(
       0,
-      1.05,
+      MEDAL_SOCKET_Y,
       0.30,
     );
 
@@ -370,9 +374,11 @@ export class BottomFinalPuzzle {
       .to(
         medal.rotation,
         {
+          // A full turn so the medal settles upright (○ on top),
+          // matching how it looked in the inventory.
           z:
             medal.rotation.z +
-            Math.PI,
+            Math.PI * 2,
           duration: 0.40,
           ease: "power2.inOut",
         },
@@ -519,9 +525,10 @@ export class BottomFinalPuzzle {
     pointer.rotation.z =
       Math.PI;
 
+    // Sits just above the dial ring and points at the top symbol.
     pointer.position.set(
       0,
-      0.98,
+      0.68,
       0.34,
     );
 
@@ -1266,13 +1273,18 @@ export class BottomFinalPuzzle {
     const step =
       Math.PI / 2;
 
+    // Snap to the nearest quarter turn without unwinding
+    // the accumulated rotation (avoids a full spin back).
+    const snappedTurns =
+      Math.round(
+        this.dialGroup
+          .rotation.z /
+          step,
+      );
+
     const quarterTurns =
       (
-        Math.round(
-          this.dialGroup
-            .rotation.z /
-            step,
-        ) %
+        snappedTurns %
           4 +
         4
       ) %
@@ -1299,7 +1311,7 @@ export class BottomFinalPuzzle {
       this.dialGroup.rotation,
       {
         z:
-          quarterTurns *
+          snappedTurns *
           step,
         duration: 0.18,
         ease: "back.out(1.5)",

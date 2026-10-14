@@ -1,0 +1,3 @@
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
+npm run dev

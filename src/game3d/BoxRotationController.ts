@@ -151,8 +151,9 @@ export class BoxRotationController {
     this.object.quaternion.normalize();
   }
 
+  // Returns true when the box was rotated by inertia this frame.
   public update(deltaSeconds: number) {
-    if (!this.enabled || this.dragging) return;
+    if (!this.enabled || this.dragging) return false;
 
     const speed =
       Math.abs(this.yawVelocity) +
@@ -161,7 +162,7 @@ export class BoxRotationController {
     if (speed < 0.00002) {
       this.yawVelocity = 0;
       this.pitchVelocity = 0;
-      return;
+      return false;
     }
 
     this.applyRotation(
@@ -176,6 +177,8 @@ export class BoxRotationController {
 
     this.yawVelocity *= damping;
     this.pitchVelocity *= damping;
+
+    return true;
   }
 
   public stopInertia() {

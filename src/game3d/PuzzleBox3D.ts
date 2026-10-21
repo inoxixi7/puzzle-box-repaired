@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { gsap } from "gsap";
 
 import {
   BOX_FACE_NAMES,
@@ -41,6 +42,11 @@ const OVERVIEW_FIT_HEIGHT = 7.0;
 
 // Extra room around a focused face.
 const FOCUS_FIT_MARGIN = 1.06;
+
+// How long to keep rendering after the last pointer / key input.
+// Puzzle handlers update the scene synchronously, so this only needs
+// to cover a few frames.
+const INPUT_RENDER_MS = 250;
 
 type ScreenInsets = {
   top: number;
@@ -107,7 +113,13 @@ export class PuzzleBox3D {
 
   private resizeObserver: ResizeObserver;
   private animationFrame = 0;
-  private clock = new THREE.Clock();
+  private timer = new THREE.Timer();
+
+  // The scene only changes on input, inertia or gsap tweens, so frames
+  // are rendered on demand instead of continuously. This keeps phones
+  // cool and saves battery while the player is thinking.
+  private needsRender = true;
+  private lastInputTime = 0;
 
   private viewportWidth = 1;
   private viewportHeight = 1;
@@ -159,7 +171,7 @@ export class PuzzleBox3D {
       true;
 
     this.renderer.shadowMap.type =
-      THREE.PCFSoftShadowMap;
+      THREE.PCFShadowMap;
 
     this.renderer.outputColorSpace =
       THREE.SRGBColorSpace;
@@ -381,8 +393,46 @@ export class PuzzleBox3D {
       this.host,
     );
 
+    for (const type of [
+      "pointerdown",
+      "pointermove",
+      "pointerup",
+      "pointercancel",
+      "wheel",
+    ]) {
+      this.host.addEventListener(
+        type,
+        this.handleInput,
+        { capture: true, passive: true },
+      );
+    }
+
+    window.addEventListener(
+      "keydown",
+      this.handleInput,
+    );
+
+    this.timer.connect(document);
+
     this.resize();
     this.animate();
+  }
+
+  private handleInput = () => {
+    this.lastInputTime =
+      performance.now();
+  };
+
+  private hasActiveTweens() {
+    // Finished tweens are removed from the global timeline, so any
+    // child left means something is (or is about to be) animating.
+    return (
+      gsap.globalTimeline.getChildren(
+        false,
+        true,
+        true,
+      ).length > 0
+    );
   }
 
   private createScene() {
@@ -910,6 +960,13 @@ export class PuzzleBox3D {
 
     // Undefined during the first resize inside the constructor.
     this.focusController?.refreshCamera();
+
+    // setSize() clears the canvas; draw right away so a resize
+    // never shows an empty frame.
+    this.renderer.render(
+      this.scene,
+      this.camera,
+    );
   }
 
   // Only on phone-sized layouts, where the HUD is laid out as bars
@@ -1087,21 +1144,39 @@ export class PuzzleBox3D {
     );
   }
 
-  private animate = () => {
+  private animate = (
+    timestamp?: number,
+  ) => {
     this.animationFrame =
       requestAnimationFrame(
         this.animate,
       );
 
+    this.timer.update(timestamp);
+
     const delta =
       Math.min(
-        this.clock.getDelta(),
+        this.timer.getDelta(),
         0.05,
       );
 
-    this.rotationController.update(
-      delta,
-    );
+    const rotated =
+      this.rotationController.update(
+        delta,
+      );
+
+    if (
+      !rotated &&
+      !this.needsRender &&
+      performance.now() -
+        this.lastInputTime >
+        INPUT_RENDER_MS &&
+      !this.hasActiveTweens()
+    ) {
+      return;
+    }
+
+    this.needsRender = false;
 
     this.renderer.render(
       this.scene,
@@ -1148,6 +1223,8 @@ export class PuzzleBox3D {
     this.finalPuzzle.setSelectedItem(
       item,
     );
+
+    this.needsRender = true;
   }
 
   public dispose() {
@@ -1156,6 +1233,27 @@ export class PuzzleBox3D {
     );
 
     this.resizeObserver.disconnect();
+
+    for (const type of [
+      "pointerdown",
+      "pointermove",
+      "pointerup",
+      "pointercancel",
+      "wheel",
+    ]) {
+      this.host.removeEventListener(
+        type,
+        this.handleInput,
+        { capture: true },
+      );
+    }
+
+    window.removeEventListener(
+      "keydown",
+      this.handleInput,
+    );
+
+    this.timer.dispose();
 
     this.puzzleOne.dispose();
     this.puzzleTwo.dispose();
@@ -1233,6 +1331,19 @@ export class PuzzleBox3D {
       const material
       of materialSet
     ) {
+      // Canvas textures (labels, symbols) are not freed by
+      // material.dispose(), so release them explicitly.
+      for (const value of Object.values(
+        material,
+      )) {
+        if (
+          value instanceof
+          THREE.Texture
+        ) {
+          value.dispose();
+        }
+      }
+
       material.dispose();
     }
 

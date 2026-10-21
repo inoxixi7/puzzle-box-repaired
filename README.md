@@ -1,5 +1,7 @@
 # Puzzle Box
 
+中文 | [日本語](README.ja.md)
+
 ## 开发环境
 
 - Node.js 22 或兼容的较新 LTS 版本
